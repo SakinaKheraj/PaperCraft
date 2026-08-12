@@ -69,5 +69,15 @@ class Settings(BaseSettings):
         ]
         return list(set(base + defaults))
 
+    @computed_field
+    @property
+    def effective_openai_base_url(self) -> str | None:
+        if self.openai_base_url and self.openai_base_url.strip():
+            return self.openai_base_url.strip()
+        key = self.openai_api_key.strip()
+        if key.startswith("AIzaSy") or key.startswith("AQ.") or "generativelanguage" in key:
+            return "https://generativelanguage.googleapis.com/v1beta/openai/"
+        return None
+
 
 settings = Settings()

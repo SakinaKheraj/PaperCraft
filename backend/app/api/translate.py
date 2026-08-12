@@ -26,8 +26,8 @@ class TranslationResponse(BaseModel):
 
 def _client() -> OpenAI:
     kwargs = {"api_key": settings.openai_api_key}
-    if settings.openai_base_url:
-        kwargs["base_url"] = settings.openai_base_url
+    if settings.effective_openai_base_url:
+        kwargs["base_url"] = settings.effective_openai_base_url
     return OpenAI(**kwargs)
 
 

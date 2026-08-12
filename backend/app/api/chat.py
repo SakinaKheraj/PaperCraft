@@ -151,8 +151,8 @@ async def _stream_direct_answer(
     # Call Gemini directly
     try:
         client_kwargs = {"api_key": settings.openai_api_key}
-        if settings.openai_base_url:
-            client_kwargs["base_url"] = settings.openai_base_url
+        if settings.effective_openai_base_url:
+            client_kwargs["base_url"] = settings.effective_openai_base_url
         llm = AsyncOpenAI(**client_kwargs)
 
         message_id = str(uuid.uuid4())
