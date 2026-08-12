@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Loader2, Plus, Trash2, Upload } from 'lucide-react'
 import { env } from '@/lib/env'
@@ -90,7 +90,6 @@ export function ThreadSidebar() {
       const data = await res.json()
       localStorage.setItem('activeDocName', data.company_name)
       toast.success(`Uploaded ${data.company_name}!`)
-      void fetchUploadedDocs()
 
       // Rename the thread to the document name
       const { updateThreadTitle } = await import('@/lib/chat')
