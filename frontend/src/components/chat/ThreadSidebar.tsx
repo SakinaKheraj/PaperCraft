@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { FileText, Loader2, Plus, Trash2, Upload } from 'lucide-react'
+import { Loader2, Plus, Trash2, Upload } from 'lucide-react'
 import { env } from '@/lib/env'
 import { toast } from 'sonner'
 
@@ -37,13 +37,6 @@ import { useThreads } from '@/hooks/useThreads'
 import type { ThreadSummary } from '@/lib/chat'
 import { groupByRecency } from '@/lib/format'
 
-type UploadedDoc = {
-  id: string
-  company_name: string
-  total_chunks: number
-  filing_date: string
-}
-
 export function ThreadSidebar() {
   const navigate = useNavigate()
   const { threadId } = useParams()
@@ -52,25 +45,8 @@ export function ThreadSidebar() {
   const [isCreating, setIsCreating] = useState(false)
   const [threadToDelete, setThreadToDelete] = useState<ThreadSummary | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
-  const [uploadedDocs, setUploadedDocs] = useState<UploadedDoc[]>([])
 
   const groups = groupByRecency(threads, (thread) => thread.updatedAt)
-
-  async function fetchUploadedDocs() {
-    try {
-      const res = await fetch(`${env.apiBaseUrl}/api/documents/list`)
-      if (res.ok) {
-        const data = await res.json()
-        setUploadedDocs(data.documents || [])
-      }
-    } catch {
-      // Ignore
-    }
-  }
-
-  useEffect(() => {
-    void fetchUploadedDocs()
-  }, [])
 
   async function handleNewChat() {
     setIsCreating(true)

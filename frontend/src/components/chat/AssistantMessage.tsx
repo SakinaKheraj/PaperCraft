@@ -125,7 +125,6 @@ export function AssistantMessage({
 }: AssistantMessageProps) {
   const text = textFromMessage(message)
   const citations = citationsFromMessage(message)
-  const hasNoEvidence = !isStreaming && text.length > 0 && citations.length === 0
 
   return (
     <div className="min-w-0 space-y-3">

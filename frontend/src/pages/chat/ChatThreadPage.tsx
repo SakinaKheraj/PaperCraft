@@ -6,7 +6,6 @@ import type { UIMessage } from 'ai'
 import { ChatError } from '@/components/chat/ChatError'
 import { ChatInput } from '@/components/chat/ChatInput'
 import { MessageList } from '@/components/chat/MessageList'
-import { SourcePassageSheet } from '@/components/chat/SourcePassageSheet'
 import { Loader } from '@/components/ui/loader'
 import { useChatTransport } from '@/hooks/useChatTransport'
 import { useThreads } from '@/hooks/useThreads'
@@ -73,13 +72,6 @@ function ChatThreadView({ threadId, initialMessages }: ChatThreadViewProps) {
       ) : null}
 
       <ChatInput status={status} onSend={send} onStop={stop} />
-
-      <SourcePassageSheet
-        citation={selectedCitation}
-        onOpenChange={(open) => {
-          if (!open) setSelectedCitation(null)
-        }}
-      />
     </div>
   )
 }
