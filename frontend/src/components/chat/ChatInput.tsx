@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useParams } from 'react-router-dom'
 import type { ChatStatus } from 'ai'
 import { ArrowUp, Square } from 'lucide-react'
 
@@ -9,6 +10,7 @@ import {
   PromptInputActions,
   PromptInputTextarea,
 } from '@/components/ui/prompt-input'
+import { useThreads } from '@/hooks/useThreads'
 
 type ChatInputProps = {
   status: ChatStatus
@@ -18,8 +20,13 @@ type ChatInputProps = {
 
 export function ChatInput({ status, onSend, onStop }: ChatInputProps) {
   const [input, setInput] = useState('')
+  const { threadId } = useParams()
+  const { threads } = useThreads()
   const isBusy = status === 'submitted' || status === 'streaming'
-  const activeDocName = localStorage.getItem('activeDocName') || ''
+  const activeThread = threads.find((t) => t.id === threadId)
+  const activeDocName = (activeThread?.title && !activeThread.title.startsWith('New chat') && !activeThread.title.startsWith('Uploading '))
+    ? activeThread.title
+    : (localStorage.getItem('activeDocName') || '')
 
   function submit() {
     const text = input.trim()

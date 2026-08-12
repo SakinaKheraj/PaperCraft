@@ -33,18 +33,8 @@ export function ChatEmptyPage() {
     const formData = new FormData()
     formData.append('file', file)
     toast.info(`Uploading ${file.name}…`)
-    let newThreadId: string | null = null
     try {
-      // 1. Create thread with "Uploading..." name immediately
-      const tempTitle = `Uploading ${file.name}...`
-      const { createThread } = await import('@/lib/chat')
-      const thread = await createThread(tempTitle)
-      newThreadId = thread.id
-
-      // Redirect immediately to the new thread page
-      navigate(`/chats/${newThreadId}`)
-
-      // 2. Perform upload directly to backend
+      // 1. Perform upload directly to backend
       const res = await fetch(`${env.apiBaseUrl}/api/documents/upload`, {
         method: 'POST',
         body: formData,
@@ -56,29 +46,25 @@ export function ChatEmptyPage() {
       }
 
       const data = await res.json()
-      localStorage.setItem('activeDocName', data.company_name)
-      toast.success(`Uploaded ${data.company_name} successfully!`)
+      const docName = data.company_name || file.name
 
-      // Rename the thread
-      const { updateThreadTitle } = await import('@/lib/chat')
-      await updateThreadTitle(newThreadId, data.company_name)
+      // 2. Set active doc name in localStorage BEFORE thread creation/navigation
+      localStorage.setItem('activeDocName', docName)
+
+      // 3. Create thread directly with the uploaded document name
+      const { createThread } = await import('@/lib/chat')
+      const thread = await createThread(docName)
       await refreshThreads()
 
-      // Start conversation with summary
-      navigate(`/chats/${newThreadId}`, {
+      toast.success(`Uploaded ${docName} successfully!`)
+
+      // 4. Navigate directly to new thread with initial prompt
+      navigate(`/chats/${thread.id}`, {
         state: { initialPrompt: 'Summarize the key points of my uploaded document.' },
       })
     } catch (err) {
       const msg = err instanceof Error ? err.message : `Failed to upload ${file.name}`
       toast.error(msg)
-      if (newThreadId) {
-        try {
-          const { updateThreadTitle } = await import('@/lib/chat')
-          await updateThreadTitle(newThreadId, 'Upload failed')
-        } catch {
-          // Ignore
-        }
-      }
     }
   }
 
