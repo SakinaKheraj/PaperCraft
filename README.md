@@ -102,4 +102,3 @@ Open **`http://localhost:5173`** in your browser.
 
 - **Backend**: Deployed on [Render](https://render.com) using standard Python runtime.
 - **Frontend**: Deployed on [Vercel](https://vercel.com) using Vite React preset.
-- **Deployment Guide**: See [docs/guides/render-vercel-deployment.md](docs/guides/render-vercel-deployment.md) for step-by-step instructions.
