@@ -11,7 +11,7 @@ import { env } from '@/lib/env'
 
 export function ChatEmptyPage() {
   const navigate = useNavigate()
-  const { createNewThread } = useThreads()
+  const { createNewThread, refreshThreads } = useThreads()
   const [isStarting, setIsStarting] = useState(false)
 
   async function startConversation(prompt?: string) {
@@ -62,6 +62,7 @@ export function ChatEmptyPage() {
       // Rename the thread
       const { updateThreadTitle } = await import('@/lib/chat')
       await updateThreadTitle(newThreadId, data.company_name)
+      await refreshThreads()
 
       // Start conversation with summary
       navigate(`/chats/${newThreadId}`, {

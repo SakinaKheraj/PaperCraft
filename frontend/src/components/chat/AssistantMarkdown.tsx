@@ -21,6 +21,16 @@ const MARKDOWN_CLASSES = cn(
   '[&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_blockquote]:text-muted-foreground',
 )
 
+function cleanLatexAndMath(text: string): string {
+  if (!text) return ''
+  return text
+    .replace(/\$\s*\\rightarrow\s*\$/g, ' → ')
+    .replace(/\\rightarrow/g, ' → ')
+    .replace(/\$\s*\\Rightarrow\s*\$/g, ' ⇒ ')
+    .replace(/\\Rightarrow/g, ' ⇒ ')
+    .replace(/\$([a-zA-Z0-9_ -]+)\$/g, '$1')
+}
+
 function withCitationLinks(text: string, validIndices: Set<number>): string {
   return text.replace(/\[(\d+)\]/g, (match, digits: string) => {
     const index = Number(digits)
@@ -51,7 +61,7 @@ export function AssistantMarkdown({
     () => new Set(citations.map((citation) => citation.citationIndex)),
     [citations],
   )
-  const source = useMemo(() => withCitationLinks(text, validIndices), [text, validIndices])
+  const source = useMemo(() => withCitationLinks(cleanLatexAndMath(text), validIndices), [text, validIndices])
 
   const components: Partial<Components> = useMemo(
     () => ({

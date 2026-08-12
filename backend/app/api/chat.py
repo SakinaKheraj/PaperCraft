@@ -142,7 +142,8 @@ async def _stream_direct_answer(
             "- Use the uploaded document content above as the primary source of truth.\n"
             "- If the question is related to the document but the details are not explicitly "
             "present, use your general knowledge to provide a helpful, accurate, and comprehensive answer.\n"
-            "- Use Markdown formatting for readability.\n"
+            "- Structure your response cleanly using Markdown headings, bullet points, and bold highlights.\n"
+            "- Do NOT output raw LaTeX math syntax like $\\rightarrow$ or $k$. Use plain text or Unicode arrows (→, ⇒) instead.\n"
             "- Be concise, thorough, and smart."
         )
 
@@ -199,7 +200,7 @@ async def _stream_direct_answer(
             await client.table("chat_messages").insert(rows).execute()
 
             updates: dict = {"updated_at": datetime.now(UTC).isoformat()}
-            if thread_title in (DEFAULT_THREAD_TITLE, "New chat", "New conversation"):
+            if thread_title in (DEFAULT_THREAD_TITLE, "New chat", "New conversation") or thread_title.startswith("Uploading "):
                 doc_name = _get_latest_document_name()
                 updates["title"] = doc_name if doc_name else title_from_user_message(user_message)
             await client.table("chat_threads").update(updates).eq("id", str(thread_id)).execute()
