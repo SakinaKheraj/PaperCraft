@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { UIMessage } from 'ai'
 import { Check, Copy } from 'lucide-react'
+import { env } from '@/lib/env'
 
 import { AssistantMarkdown } from '@/components/chat/AssistantMarkdown'
 import { CitationChip } from '@/components/chat/CitationChip'
@@ -41,6 +42,81 @@ function CopyButton({ text }: { text: string }) {
   )
 }
 
+function TranslateButton({ text }: { text: string }) {
+  const [isTranslating, setIsTranslating] = useState(false)
+  const [translatedText, setTranslatedText] = useState<string | null>(null)
+  const [selectedLang, setSelectedLang] = useState('Spanish')
+
+  async function handleTranslate(lang: string) {
+    setSelectedLang(lang)
+    setIsTranslating(true)
+    try {
+      const res = await fetch(`${env.apiBaseUrl}/api/translate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, target_language: lang }),
+      })
+      if (!res.ok) throw new Error('Translation failed')
+      const data = await res.json()
+      setTranslatedText(data.translated_text)
+    } catch {
+      // Ignore
+    } finally {
+      setIsTranslating(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2 pt-1">
+      <div className="flex items-center gap-2">
+        <CopyButton text={translatedText || text} />
+        <select
+          value={selectedLang}
+          onChange={(e) => void handleTranslate(e.target.value)}
+          className="h-7 rounded-md border border-input bg-background px-2 text-xs font-medium text-foreground hover:bg-accent focus:outline-none"
+        >
+          <option value="Spanish">Spanish 🇪🇸</option>
+          <option value="French">French 🇫🇷</option>
+          <option value="German">German 🇩🇪</option>
+          <option value="Hindi">Hindi 🇮🇳</option>
+          <option value="Japanese">Japanese 🇯🇵</option>
+          <option value="Chinese">Chinese 🇨🇳</option>
+          <option value="Italian">Italian 🇮🇹</option>
+          <option value="Portuguese">Portuguese 🇵🇹</option>
+        </select>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-7 px-2 text-xs"
+          disabled={isTranslating}
+          onClick={() => void handleTranslate(selectedLang)}
+        >
+          {isTranslating ? 'Translating…' : 'Translate'}
+        </Button>
+        {translatedText && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs text-muted-foreground"
+            onClick={() => setTranslatedText(null)}
+          >
+            Show Original
+          </Button>
+        )}
+      </div>
+
+      {translatedText && (
+        <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm text-foreground">
+          <p className="mb-1 text-xs font-semibold text-primary">Translated to {selectedLang}:</p>
+          <div className="whitespace-pre-wrap">{translatedText}</div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function AssistantMessage({
   message,
   selectedCitationIndex,
@@ -66,12 +142,6 @@ export function AssistantMessage({
         <span className="inline-block h-4 w-2 translate-y-0.5 animate-pulse rounded-sm bg-foreground" />
       ) : null}
 
-      {hasNoEvidence ? (
-        <p className="rounded-lg border border-dashed bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-          No filing evidence was found to support this answer.
-        </p>
-      ) : null}
-
       {citations.length > 0 ? (
         <div className="flex flex-wrap gap-1.5 pt-1">
           {citations.map((citation) => (
@@ -85,11 +155,7 @@ export function AssistantMessage({
         </div>
       ) : null}
 
-      {!isStreaming && text ? (
-        <div className="flex items-center gap-1 pt-0.5">
-          <CopyButton text={text} />
-        </div>
-      ) : null}
+      {!isStreaming && text ? <TranslateButton text={text} /> : null}
     </div>
   )
 }

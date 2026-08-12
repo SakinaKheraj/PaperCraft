@@ -15,6 +15,7 @@ class SearchFilters(BaseModel):
     ticker: str | None = None
     fiscal_years: list[int] | None = None
     form: str | None = None
+    company_name: str | None = None
 
 
 class RankedChunkHit(BaseModel):

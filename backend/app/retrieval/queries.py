@@ -38,6 +38,9 @@ def _build_filters(filters: SearchFilters | None) -> _FilterClause:
     if filters.form is not None:
         clauses.append("sd.form = :form")
         params["form"] = filters.form
+    if filters.company_name is not None:
+        clauses.append("sd.company_name = :company_name")
+        params["company_name"] = filters.company_name
 
     if not clauses:
         return _FilterClause("", {})

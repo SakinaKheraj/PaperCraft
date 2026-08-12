@@ -76,6 +76,22 @@ async def create_thread(
     *,
     title: str | None = None,
 ) -> ThreadResponse:
+    if not title or title == DEFAULT_THREAD_TITLE:
+        try:
+            from app.database.session import get_session
+            from app.database.models import SourceDocument
+            from sqlalchemy import select
+            with get_session() as session:
+                doc = session.scalars(
+                    select(SourceDocument)
+                    .where(SourceDocument.form == "CUSTOM")
+                    .order_by(SourceDocument.created_at.desc())
+                ).first()
+                if doc:
+                    title = doc.company_name
+        except Exception:
+            pass
+
     thread_id = uuid.uuid4()
     response = await (
         client.table("chat_threads")
@@ -93,6 +109,21 @@ async def create_thread(
 
 
 async def delete_thread(client: AsyncClient, thread_id: uuid.UUID) -> None:
+    try:
+        # 1. Fetch message IDs belonging to the thread
+        res = await client.table("chat_messages").select("id").eq("thread_id", str(thread_id)).execute()
+        msg_ids = [row["id"] for row in res.data] if res.data else []
+
+        # 2. Delete message citations
+        if msg_ids:
+            await client.table("message_citations").delete().in_("message_id", msg_ids).execute()
+
+        # 3. Delete chat messages
+        await client.table("chat_messages").delete().eq("thread_id", str(thread_id)).execute()
+    except Exception:
+        pass
+
+    # 4. Delete the thread itself
     await client.table("chat_threads").delete().eq("id", str(thread_id)).execute()
 
 

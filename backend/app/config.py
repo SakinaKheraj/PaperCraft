@@ -19,10 +19,11 @@ class Settings(BaseSettings):
     database_url: str
 
     openai_api_key: str
-    openai_embedding_model: str = "text-embedding-3-small"
+    openai_base_url: str | None = None
+    openai_embedding_model: str = "models/gemini-embedding-2"
     openai_embedding_dimensions: int = 1536
-    openai_chat_model: str = "gpt-5.5"
-    openai_grounding_model: str = "gpt-4.1-mini"
+    openai_chat_model: str = "gemini-3.5-flash"
+    openai_grounding_model: str = "gemini-3.5-flash"
     openai_agent_request_limit: int = 20
     openai_agent_temperature: float = 0.0
 
@@ -31,7 +32,7 @@ class Settings(BaseSettings):
     retrieval_rrf_k: int = 60
     retrieval_neighbor_radius: int = 1
     retrieval_fts_config: str = "english"
-    retrieval_fts_keyword_model: str = "gpt-4.1-mini"
+    retrieval_fts_keyword_model: str = "gemini-3.5-flash"
     retrieval_fts_keyword_min: int = 3
     retrieval_fts_keyword_max: int = 5
     retrieval_fts_keyword_fast_path_tokens: int = 5
@@ -53,11 +54,20 @@ class Settings(BaseSettings):
     @computed_field
     @property
     def cors_origins(self) -> list[str]:
-        return [
+        base = [
             origin.strip()
             for origin in self.allowed_origins.split(",")
             if origin.strip()
         ]
+        defaults = [
+            "http://localhost:5173",
+            "http://localhost:5174",
+            "http://localhost:5175",
+            "http://127.0.0.1:5173",
+            "http://127.0.0.1:5174",
+            "http://127.0.0.1:5175",
+        ]
+        return list(set(base + defaults))
 
 
 settings = Settings()

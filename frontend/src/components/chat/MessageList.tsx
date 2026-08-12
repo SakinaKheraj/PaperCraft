@@ -49,7 +49,7 @@ export function MessageList({
           <div className="flex flex-1 flex-col items-center justify-center gap-6 py-12 text-center">
             <div className="space-y-1">
               <h2 className="text-lg font-semibold text-foreground">
-                Ask about SEC filings
+                Ask about your document
               </h2>
               <p className="text-sm text-muted-foreground">
                 Every answer is grounded in source documents with citations.

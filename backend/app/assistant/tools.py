@@ -64,7 +64,8 @@ def _search_sync(
 ) -> list[RetrievedPassage]:
     filters = SearchFilters(
         ticker=ticker,
-        form=form,
+        form="CUSTOM",
+        company_name=deps.active_document_name,
         fiscal_years=_parse_fiscal_years(fiscal_years),
     )
     return deps.retriever.search(query, filters=filters)

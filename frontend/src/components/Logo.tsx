@@ -23,9 +23,9 @@ export function Logo({ className }: LogoProps) {
       <LogoMark />
       <div className="flex flex-col leading-none">
         <span className="text-sm font-semibold tracking-tight text-foreground">
-          Document Copilot
+          Paper Craft
         </span>
-        <span className="text-xs text-muted-foreground">SEC filing assistant</span>
+        <span className="text-xs text-muted-foreground">AI Document & Translator</span>
       </div>
     </div>
   )

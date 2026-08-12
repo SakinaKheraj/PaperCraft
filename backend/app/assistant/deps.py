@@ -35,6 +35,7 @@ class DocumentAgentDeps:
     thread_id: UUID
     user_id: UUID
     on_status: StatusCallback | None = None
+    active_document_name: str | None = None
 
     def emit_status(self, stage: str, message: str) -> None:
         if self.on_status is not None:

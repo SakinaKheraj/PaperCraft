@@ -19,6 +19,7 @@ type ChatInputProps = {
 export function ChatInput({ status, onSend, onStop }: ChatInputProps) {
   const [input, setInput] = useState('')
   const isBusy = status === 'submitted' || status === 'streaming'
+  const activeDocName = localStorage.getItem('activeDocName') || ''
 
   function submit() {
     const text = input.trim()
@@ -30,6 +31,12 @@ export function ChatInput({ status, onSend, onStop }: ChatInputProps) {
   return (
     <div className="bg-background px-4 pb-4">
       <div className="mx-auto w-full max-w-3xl">
+        {activeDocName ? (
+          <div className="mb-2 flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs text-primary shadow-xs">
+            <span className="font-semibold">📄 Active Document:</span>
+            <span className="truncate font-medium">{activeDocName}</span>
+          </div>
+        ) : null}
         <PromptInput
           value={input}
           onValueChange={setInput}
@@ -37,7 +44,7 @@ export function ChatInput({ status, onSend, onStop }: ChatInputProps) {
           onSubmit={submit}
           className="rounded-2xl"
         >
-          <PromptInputTextarea placeholder="Ask about SEC filings…" />
+          <PromptInputTextarea placeholder="Ask any question about your uploaded document…" />
           <PromptInputActions className="justify-end pt-1">
             {isBusy ? (
               <PromptInputAction tooltip="Stop">
@@ -62,7 +69,7 @@ export function ChatInput({ status, onSend, onStop }: ChatInputProps) {
           </PromptInputActions>
         </PromptInput>
         <p className="mt-2 text-center text-xs text-muted-foreground">
-          Answers are grounded in SEC filings. Verify citations before relying on them.
+          Answers are generated from your uploaded document. Use the Translate button on any answer for multi-lingual translation.
         </p>
       </div>
     </div>

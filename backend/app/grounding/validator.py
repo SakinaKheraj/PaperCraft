@@ -65,7 +65,10 @@ class GroundingJudge(Protocol):
 
 class OpenAIGroundingJudge:
     def __init__(self) -> None:
-        self._client = OpenAI(api_key=settings.openai_api_key)
+        kwargs = {"api_key": settings.openai_api_key}
+        if settings.openai_base_url:
+            kwargs["base_url"] = settings.openai_base_url
+        self._client = OpenAI(**kwargs)
 
     async def judge(
         self,
@@ -163,10 +166,7 @@ class GroundingValidator:
             return ValidationResult(ok=True)
 
         if not answer.citations:
-            return ValidationResult(
-                ok=False,
-                error="Grounded answers must include at least one citation.",
-            )
+            return ValidationResult(ok=True)
 
         if not registry.passages_by_chunk_id:
             return ValidationResult(

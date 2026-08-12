@@ -61,6 +61,10 @@ export async function deleteThread(threadId: string): Promise<void> {
   await api.delete<void>(`/chat/threads/${threadId}`)
 }
 
+export async function updateThreadTitle(threadId: string, title: string): Promise<ThreadSummary> {
+  return api.patch<ThreadSummary>(`/chat/threads/${threadId}`, { title })
+}
+
 export async function getThreadMessages(threadId: string): Promise<UIMessage[]> {
   const response = await api.get<MessageHistoryResponse>(
     `/chat/threads/${threadId}/messages`,

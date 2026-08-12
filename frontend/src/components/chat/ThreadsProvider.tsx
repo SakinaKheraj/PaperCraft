@@ -58,6 +58,14 @@ export function ThreadsProvider({ children }: { children: ReactNode }) {
     setThreads((current) => current.filter((thread) => thread.id !== threadId))
   }, [])
 
+  const updateThreadTitleAction = useCallback(async (threadId: string, title: string) => {
+    const { updateThreadTitle } = await import('@/lib/chat')
+    await updateThreadTitle(threadId, title)
+    setThreads((current) =>
+      current.map((thread) => (thread.id === threadId ? { ...thread, title } : thread)),
+    )
+  }, [])
+
   const value = useMemo(
     () => ({
       threads,
@@ -66,8 +74,9 @@ export function ThreadsProvider({ children }: { children: ReactNode }) {
       refreshThreads,
       createNewThread,
       deleteThread,
+      updateThreadTitle: updateThreadTitleAction,
     }),
-    [threads, isLoading, error, refreshThreads, createNewThread, deleteThread],
+    [threads, isLoading, error, refreshThreads, createNewThread, deleteThread, updateThreadTitleAction],
   )
 
   return <ThreadsContext.Provider value={value}>{children}</ThreadsContext.Provider>

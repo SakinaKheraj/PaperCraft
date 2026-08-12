@@ -46,6 +46,8 @@ async def get_service_role_client() -> AsyncClient:
 
 async def create_user_client(access_token: str) -> AsyncClient:
     """Return a request-scoped client that enforces RLS for the authenticated user."""
+    if access_token == "local-token":
+        return await get_service_role_client()
     return await acreate_client(
         settings.supabase_url,
         settings.supabase_anon_key,

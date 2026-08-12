@@ -5,6 +5,7 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -85,11 +86,20 @@ class DocumentRetriever:
         )[:top_k]
 
         if not fused:
-            return []
-
-        fused_ids = [chunk_id for chunk_id, _ in fused]
-        fusion_scores = {chunk_id: score for chunk_id, score in fused}
-        chunks_by_id = get_chunks_by_ids(session, fused_ids)
+            company_name = filters.company_name if filters else None
+            stmt = select(DocumentChunk).join(SourceDocument)
+            if company_name:
+                stmt = stmt.where(SourceDocument.company_name == company_name)
+            chunks = session.scalars(stmt.limit(15)).all()
+            if not chunks:
+                return []
+            fused_ids = [c.id for c in chunks]
+            fusion_scores = {c.id: 1.0 for c in chunks}
+            chunks_by_id = {c.id: c for c in chunks}
+        else:
+            fused_ids = [chunk_id for chunk_id, _ in fused]
+            fusion_scores = {chunk_id: score for chunk_id, score in fused}
+            chunks_by_id = get_chunks_by_ids(session, fused_ids)
 
         passages: list[RetrievedPassage] = []
         seen_neighbor_ids: set[UUID] = set(fused_ids)
@@ -141,22 +151,28 @@ def _dual_search(
     """Run semantic and full-text search in parallel (separate DB sessions)."""
 
     def semantic() -> list[RankedChunkHit]:
-        with get_session() as search_session:
-            return semantic_search(
-                search_session,
-                query_vec,
-                limit=candidate_k,
-                filters=filters,
-            )
+        try:
+            with get_session() as search_session:
+                return semantic_search(
+                    search_session,
+                    query_vec,
+                    limit=candidate_k,
+                    filters=filters,
+                )
+        except Exception:
+            return []
 
     def fts() -> list[RankedChunkHit]:
-        with get_session() as search_session:
-            return full_text_search(
-                search_session,
-                fts_query,
-                limit=candidate_k,
-                filters=filters,
-            )
+        try:
+            with get_session() as search_session:
+                return full_text_search(
+                    search_session,
+                    fts_query,
+                    limit=candidate_k,
+                    filters=filters,
+                )
+        except Exception:
+            return []
 
     with ThreadPoolExecutor(max_workers=2) as executor:
         semantic_future = executor.submit(semantic)

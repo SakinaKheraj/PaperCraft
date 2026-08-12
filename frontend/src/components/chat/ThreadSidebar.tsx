@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Loader2, Plus, Trash2 } from 'lucide-react'
+import { FileText, Loader2, Plus, Trash2, Upload } from 'lucide-react'
+import { env } from '@/lib/env'
 import { toast } from 'sonner'
 
 import { Logo } from '@/components/Logo'
@@ -36,16 +37,40 @@ import { useThreads } from '@/hooks/useThreads'
 import type { ThreadSummary } from '@/lib/chat'
 import { groupByRecency } from '@/lib/format'
 
+type UploadedDoc = {
+  id: string
+  company_name: string
+  total_chunks: number
+  filing_date: string
+}
+
 export function ThreadSidebar() {
   const navigate = useNavigate()
   const { threadId } = useParams()
   const { setOpenMobile, isMobile } = useSidebar()
-  const { threads, isLoading, error, createNewThread, deleteThread } = useThreads()
+  const { threads, isLoading, error, createNewThread, deleteThread, refreshThreads } = useThreads()
   const [isCreating, setIsCreating] = useState(false)
   const [threadToDelete, setThreadToDelete] = useState<ThreadSummary | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [uploadedDocs, setUploadedDocs] = useState<UploadedDoc[]>([])
 
   const groups = groupByRecency(threads, (thread) => thread.updatedAt)
+
+  async function fetchUploadedDocs() {
+    try {
+      const res = await fetch(`${env.apiBaseUrl}/api/documents/list`)
+      if (res.ok) {
+        const data = await res.json()
+        setUploadedDocs(data.documents || [])
+      }
+    } catch {
+      // Ignore
+    }
+  }
+
+  useEffect(() => {
+    void fetchUploadedDocs()
+  }, [])
 
   async function handleNewChat() {
     setIsCreating(true)
@@ -55,6 +80,63 @@ export function ThreadSidebar() {
       if (isMobile) setOpenMobile(false)
     } finally {
       setIsCreating(false)
+    }
+  }
+
+  async function handleFileUpload(file: File) {
+    const formData = new FormData()
+    formData.append('file', file)
+    toast.info(`Uploading ${file.name}…`)
+    let newThreadId: string | null = null
+    try {
+      // 1. Create a new thread named "Uploading..." immediately
+      const tempTitle = `Uploading ${file.name}...`
+      const { createThread } = await import('@/lib/chat')
+      const thread = await createThread(tempTitle)
+      newThreadId = thread.id
+      await refreshThreads()
+
+      // Redirect immediately to show the chat page
+      navigate(`/chats/${newThreadId}`)
+      if (isMobile) setOpenMobile(false)
+
+      // 2. Perform the upload directly to backend
+      const res = await fetch(`${env.apiBaseUrl}/api/documents/upload`, {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.detail || 'Upload failed')
+      }
+
+      const data = await res.json()
+      localStorage.setItem('activeDocName', data.company_name)
+      toast.success(`Uploaded ${data.company_name}!`)
+      void fetchUploadedDocs()
+
+      // Rename the thread to the document name
+      const { updateThreadTitle } = await import('@/lib/chat')
+      await updateThreadTitle(newThreadId, data.company_name)
+      await refreshThreads()
+
+      // Automatically generate a summary to start the chat!
+      navigate(`/chats/${newThreadId}`, {
+        state: { initialPrompt: 'Summarize the key points of my uploaded document.' },
+      })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : `Failed to upload ${file.name}`
+      toast.error(msg)
+      if (newThreadId) {
+        try {
+          const { updateThreadTitle } = await import('@/lib/chat')
+          await updateThreadTitle(newThreadId, 'Upload failed')
+          await refreshThreads()
+        } catch {
+          // Ignore
+        }
+      }
     }
   }
 
@@ -85,18 +167,34 @@ export function ThreadSidebar() {
       <Sidebar>
         <SidebarHeader className="gap-3 p-3">
           <Logo className="px-1 py-1" />
-          <Button
-            variant="outline"
-            className="w-full justify-start gap-2 border-dashed bg-background/50 text-muted-foreground shadow-none hover:bg-muted/50 hover:text-foreground"
-            onClick={() => void handleNewChat()}
-            disabled={isCreating}
-          >
-            <Plus className="size-4" />
-            {isCreating ? 'Creating…' : 'New chat'}
-          </Button>
+          <div className="flex flex-col gap-2">
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-2 border-dashed bg-background/50 text-muted-foreground shadow-none hover:bg-muted/50 hover:text-foreground"
+              onClick={() => void handleNewChat()}
+              disabled={isCreating}
+            >
+              <Plus className="size-4" />
+              {isCreating ? 'Creating…' : 'New chat'}
+            </Button>
+            <label className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-medium text-primary hover:bg-primary/20">
+              <Upload className="size-3.5" />
+              Upload PDF / TXT
+              <input
+                type="file"
+                accept=".pdf,.txt,.md"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) void handleFileUpload(file)
+                }}
+              />
+            </label>
+          </div>
         </SidebarHeader>
 
         <SidebarContent className="px-1">
+
           {isLoading ? (
             <SidebarGroup>
               <SidebarGroupContent>
@@ -210,3 +308,5 @@ export function ThreadSidebar() {
     </>
   )
 }
+
+

@@ -10,7 +10,7 @@ export function PipelineStatus({ isSubmitted, pipelineStatus }: PipelineStatusPr
   const message =
     isSubmitted && !pipelineStatus
       ? 'Analyzing your question…'
-      : (pipelineStatus?.message ?? 'Researching filings…')
+      : (pipelineStatus?.message ?? 'Researching documents…')
 
   return (
     <p

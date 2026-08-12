@@ -22,7 +22,7 @@ from app.grounding.validator import GroundingValidator, prune_unreferenced_citat
 from app.retrieval.retriever import DocumentRetriever
 from app.schemas.chat import UIMessage
 
-MAX_VALIDATION_ATTEMPTS = 2
+MAX_VALIDATION_ATTEMPTS = 1
 
 
 async def _yield_status_updates(
@@ -77,6 +77,7 @@ async def run_turn(
             thread_id=thread_id,
             user_id=user.id,
             on_status=on_status,
+            active_document_name=thread_title,
         )
         agent_task = asyncio.create_task(
             asyncio.to_thread(run_document_agent, query, deps)

@@ -28,9 +28,12 @@ _document_agent: Agent[DocumentAgentDeps, GroundedAnswer] | None = None
 def get_document_agent() -> Agent[DocumentAgentDeps, GroundedAnswer]:
     global _document_agent
     if _document_agent is None:
+        provider_kwargs = {"api_key": settings.openai_api_key}
+        if settings.openai_base_url:
+            provider_kwargs["base_url"] = settings.openai_base_url
         model = OpenAIChatModel(
             settings.openai_chat_model,
-            provider=OpenAIProvider(api_key=settings.openai_api_key),
+            provider=OpenAIProvider(**provider_kwargs),
         )
         _document_agent = Agent(
             model,
@@ -51,7 +54,7 @@ def run_document_agent(query: str, deps: DocumentAgentDeps) -> GroundedAnswer:
     result = get_document_agent().run_sync(
         query,
         deps=deps,
-        usage_limits=UsageLimits(request_limit=settings.openai_agent_request_limit),
+        usage_limits=UsageLimits(request_limit=3),
     )
     usage = result.usage
     emit_agent_done(
