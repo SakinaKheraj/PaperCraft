@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { Analytics } from '@vercel/analytics/react'
 
 import { ChatLayout } from '@/components/chat/ChatLayout'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
@@ -42,6 +43,7 @@ function App() {
         </Route>
         <Route path="*" element={<Navigate to="/chats" replace />} />
       </Routes>
+      <Analytics />
     </BrowserRouter>
   )
 }
