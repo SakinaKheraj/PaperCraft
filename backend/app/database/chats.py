@@ -76,22 +76,6 @@ async def create_thread(
     *,
     title: str | None = None,
 ) -> ThreadResponse:
-    if not title or title == DEFAULT_THREAD_TITLE:
-        try:
-            from app.database.session import get_session
-            from app.database.models import SourceDocument
-            from sqlalchemy import select
-            with get_session() as session:
-                doc = session.scalars(
-                    select(SourceDocument)
-                    .where(SourceDocument.form == "CUSTOM")
-                    .order_by(SourceDocument.created_at.desc())
-                ).first()
-                if doc:
-                    title = doc.company_name
-        except Exception:
-            pass
-
     thread_id = uuid.uuid4()
     response = await (
         client.table("chat_threads")

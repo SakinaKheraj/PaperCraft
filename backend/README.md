@@ -1,19 +1,19 @@
-# Backend
-
-FastAPI service for Document Copilot. Python 3.12+, managed with [uv](https://docs.astral.sh/uv/).
+# PaperCraft Backend
+ 
+FastAPI backend service for PaperCraft. Python 3.12+, managed with [uv](https://docs.astral.sh/uv/).
 
 ## Setup
 
 ```bash
 cd backend
-cp .env.example .env   # fill in Supabase, Postgres, and OpenAI values
+cp .env.example .env   # fill in Supabase, Postgres, and Gemini API values
 uv sync
 ```
 
 ## Run
 
 ```bash
-uv run uvicorn app.main:app --reload
+uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
 - API: [http://127.0.0.1:8000](http://127.0.0.1:8000)
@@ -22,10 +22,10 @@ uv run uvicorn app.main:app --reload
 
 Alternative: `uv run python app/main.py`
 
-## Day-to-day
+## Day-to-day Commands
 
 | Task | Command |
-| --- | --- |
+| :--- | :--- |
 | Install / update deps | `uv sync` |
 | Install ingestion deps | `uv sync --extra ingest` |
 | Add a dependency | `uv add <package>` |
@@ -35,4 +35,3 @@ Alternative: `uv run python app/main.py`
 
 Env vars are read from `.env` via `app.config.settings` — do not call `os.getenv` in app code.
 
-More detail (Alembic init, Jupyter kernel, ingestion): [docs/guides/backend-setup.md](../docs/guides/backend-setup.md).

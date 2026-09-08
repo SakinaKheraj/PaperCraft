@@ -78,17 +78,14 @@ export function ThreadSidebar() {
       const data = await res.json()
       const docName = data.company_name || file.name
 
-      // 2. Set active doc name in localStorage BEFORE thread creation/navigation
-      localStorage.setItem('activeDocName', docName)
-
-      // 3. Create thread directly with the uploaded document name
+      // 2. Create thread directly with the uploaded document name
       const { createThread } = await import('@/lib/chat')
       const thread = await createThread(docName)
       await refreshThreads()
 
       toast.success(`Uploaded ${docName}!`)
 
-      // 4. Navigate directly to new chat thread with automatic summary prompt
+      // 3. Navigate directly to new chat thread with automatic summary prompt
       navigate(`/chats/${thread.id}`, {
         state: { initialPrompt: 'Summarize the key points of my uploaded document.' },
       })

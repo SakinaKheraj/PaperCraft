@@ -18,15 +18,30 @@ type ChatInputProps = {
   onStop: () => void
 }
 
+function getActiveDocDisplayName(title: string | undefined): string {
+  if (!title) return ''
+  const trimmed = title.trim()
+  if (!trimmed || trimmed === 'New chat' || trimmed === 'New conversation' || trimmed === 'Untitled') {
+    return ''
+  }
+  if (/^uploading\s+/i.test(trimmed)) {
+    return trimmed
+      .replace(/^uploading\s+/i, '')
+      .replace(/\.\.\.$/, '')
+      .replace(/\.(pdf|txt|md|docx?)$/i, '')
+      .replace(/[_\-]+/g, ' ')
+      .trim()
+  }
+  return trimmed
+}
+
 export function ChatInput({ status, onSend, onStop }: ChatInputProps) {
   const [input, setInput] = useState('')
   const { threadId } = useParams()
   const { threads } = useThreads()
   const isBusy = status === 'submitted' || status === 'streaming'
   const activeThread = threads.find((t) => t.id === threadId)
-  const activeDocName = (activeThread?.title && !activeThread.title.startsWith('New chat') && !activeThread.title.startsWith('Uploading '))
-    ? activeThread.title
-    : (localStorage.getItem('activeDocName') || '')
+  const activeDocName = getActiveDocDisplayName(activeThread?.title)
 
   function submit() {
     const text = input.trim()

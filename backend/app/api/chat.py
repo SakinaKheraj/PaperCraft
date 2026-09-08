@@ -13,6 +13,7 @@ from openai import AsyncOpenAI
 from pydantic import BaseModel
 from sqlalchemy import select
 
+import re
 from app.auth.dependencies import CurrentUser, get_access_token, get_current_user
 from app.chat.messages import (
     DEFAULT_THREAD_TITLE,
@@ -53,30 +54,99 @@ def _sse(payload: dict) -> str:
     return f"data: {json.dumps(payload, separators=(',', ':'), default=str)}\n\n"
 
 
-def _get_latest_document_name() -> str | None:
-    """Get the name of the most recently uploaded document."""
+def _normalize_string(s: str) -> str:
+    """Normalize string by removing special characters, extensions, and common prefixes."""
+    if not s:
+        return ""
+    s = re.sub(r"^uploading\s+", "", s, flags=re.IGNORECASE)
+    s = re.sub(r"\.\.+$", "", s)
+    s = re.sub(r"\.(pdf|txt|md|docx?)$", "", s, flags=re.IGNORECASE)
+    s = re.sub(r"[_\-\.\:]+", " ", s).strip().lower()
+    return re.sub(r"\s+", " ", s)
+
+
+def _find_matching_document(thread_title: str) -> SourceDocument | None:
+    """Find the SourceDocument that matches the given thread title using multiple matching strategies."""
+    if not thread_title or thread_title in (DEFAULT_THREAD_TITLE, "New chat", "New conversation", "Untitled"):
+        return None
+
+    normalized_title = _normalize_string(thread_title)
+    if not normalized_title:
+        return None
+
     with get_session() as session:
-        doc = session.scalars(
+        all_docs = session.scalars(
             select(SourceDocument)
             .where(SourceDocument.form == "CUSTOM")
             .order_by(SourceDocument.created_at.desc())
-        ).first()
-        return doc.company_name if doc else None
+        ).all()
+
+        if not all_docs:
+            return None
+
+        # Strategy 1: Exact matches on company_name or primary_document
+        for doc in all_docs:
+            if doc.company_name and doc.company_name.strip().lower() == thread_title.strip().lower():
+                return doc
+            if doc.primary_document and doc.primary_document.strip().lower() == thread_title.strip().lower():
+                return doc
+
+        # Strategy 2: Normalized exact matches
+        for doc in all_docs:
+            doc_norm_name = _normalize_string(doc.company_name or "")
+            doc_norm_file = _normalize_string(doc.primary_document or "")
+            if normalized_title == doc_norm_name or normalized_title == doc_norm_file:
+                return doc
+
+        # Strategy 3: Normalized substring / prefix containment
+        alpha_title = re.sub(r"[^a-z0-9]", "", normalized_title)
+        best_doc = None
+        best_overlap_len = 0
+
+        for doc in all_docs:
+            doc_norm_name = _normalize_string(doc.company_name or "")
+            doc_norm_file = _normalize_string(doc.primary_document or "")
+            alpha_doc_name = re.sub(r"[^a-z0-9]", "", doc_norm_name)
+            alpha_doc_file = re.sub(r"[^a-z0-9]", "", doc_norm_file)
+
+            if alpha_title and len(alpha_title) >= 3:
+                is_match = (
+                    alpha_title in alpha_doc_name
+                    or alpha_title in alpha_doc_file
+                    or (alpha_doc_name and alpha_doc_name in alpha_title)
+                    or (alpha_doc_file and alpha_doc_file in alpha_title)
+                )
+                if is_match:
+                    overlap_len = max(
+                        len(alpha_title) if (alpha_title in alpha_doc_name or alpha_title in alpha_doc_file) else 0,
+                        len(alpha_doc_name) if alpha_doc_name in alpha_title else 0,
+                        len(alpha_doc_file) if alpha_doc_file in alpha_title else 0,
+                    )
+                    if overlap_len > best_overlap_len:
+                        best_overlap_len = overlap_len
+                        best_doc = doc
+
+        if best_doc:
+            return best_doc
+
+        return None
 
 
 def _load_document_text_by_title(thread_title: str) -> str:
     """Load only the document chunks that belong to the active document of this thread."""
     with get_session() as session:
-        # 1. Try to find the document whose company name matches the thread_title
-        chunks = session.scalars(
-            select(DocumentChunk)
-            .join(SourceDocument)
-            .where(SourceDocument.company_name == thread_title)
-            .order_by(DocumentChunk.chunk_index)
-        ).all()
+        matched_doc = _find_matching_document(thread_title)
+        if matched_doc:
+            chunks = session.scalars(
+                select(DocumentChunk)
+                .where(DocumentChunk.document_id == matched_doc.id)
+                .order_by(DocumentChunk.chunk_index)
+            ).all()
+            if chunks:
+                return "\n".join(chunk.text for chunk in chunks)
 
-        # 2. If no chunks found, fall back to the most recently uploaded document
-        if not chunks:
+        # Fallback for generic new chats
+        if not thread_title or thread_title in (DEFAULT_THREAD_TITLE, "New chat", "New conversation", "Untitled"):
             latest_doc = session.scalars(
                 select(SourceDocument)
                 .where(SourceDocument.form == "CUSTOM")
@@ -88,11 +158,10 @@ def _load_document_text_by_title(thread_title: str) -> str:
                     .where(DocumentChunk.document_id == latest_doc.id)
                     .order_by(DocumentChunk.chunk_index)
                 ).all()
+                if chunks:
+                    return "\n".join(chunk.text for chunk in chunks)
 
-        if not chunks:
-            return ""
-
-        return "\n".join(chunk.text for chunk in chunks)
+        return ""
 
 
 def _extract_user_query(messages: list[UIMessage]) -> str:
@@ -200,9 +269,16 @@ async def _stream_direct_answer(
             await client.table("chat_messages").insert(rows).execute()
 
             updates: dict = {"updated_at": datetime.now(UTC).isoformat()}
-            if thread_title in (DEFAULT_THREAD_TITLE, "New chat", "New conversation") or thread_title.startswith("Uploading "):
-                doc_name = _get_latest_document_name()
-                updates["title"] = doc_name if doc_name else title_from_user_message(user_message)
+            if thread_title.startswith("Uploading "):
+                matched_doc = _find_matching_document(thread_title)
+                if matched_doc:
+                    updates["title"] = matched_doc.company_name
+                else:
+                    cleaned = _normalize_string(thread_title).title()
+                    if cleaned:
+                        updates["title"] = cleaned
+            elif thread_title in (DEFAULT_THREAD_TITLE, "New chat", "New conversation"):
+                updates["title"] = title_from_user_message(user_message)
             await client.table("chat_threads").update(updates).eq("id", str(thread_id)).execute()
         except Exception:
             pass  # Don't fail the response if persistence fails
